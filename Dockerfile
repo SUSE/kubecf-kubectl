@@ -21,9 +21,8 @@ RUN zypper --non-interactive install \
 
 ARG KUBECTL_VERSION
 ENV KUBECTL_VERSION=${KUBECTL_VERSION}
-WORKDIR /build
-RUN git clone --depth=1 --branch="${KUBECTL_VERSION}" https://github.com/kubernetes/kubernetes.git
 WORKDIR /build/kubernetes
+RUN git clone --depth=1 --branch="${KUBECTL_VERSION}" https://github.com/kubernetes/kubernetes.git /build/kubernetes
 RUN make kubectl
 
 FROM scratch
