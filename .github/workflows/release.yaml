@@ -10,7 +10,7 @@ on:
       kubectl_version:
         description: The kubectl version to build.
         required: true
-        default: v1.18.9
+        default: v1.19.2
 
 jobs:
   release:

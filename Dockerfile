@@ -12,17 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM opensuse/leap:15.2@sha256:7a6c8562ddbc367e20b08538b0ac6c57fc400a6edece39b8495afeaaa9cea58a AS staging
+FROM opensuse/tumbleweed AS staging
+
 RUN zypper refresh
 RUN zypper --non-interactive install \
-        git-core \
-        go1.14 \
-        make
+      git-core \
+      make \
+      python3-yq
 
+WORKDIR /build/kubernetes
 ARG KUBECTL_VERSION
 ENV KUBECTL_VERSION=${KUBECTL_VERSION}
-WORKDIR /build/kubernetes
-RUN git clone --depth=1 --branch="${KUBECTL_VERSION}" https://github.com/kubernetes/kubernetes.git /build/kubernetes
+RUN git clone \
+      --depth=1 \
+      --branch="${KUBECTL_VERSION}" \
+      https://github.com/kubernetes/kubernetes.git /build/kubernetes
+
+RUN yq -r \
+      '.dependencies[] | select(.name | startswith("golang")) | .version' \
+      "build/dependencies.yaml" \
+      | awk 'match($0, /^([0-9]+\.[0-9]+).*$/, version) { print version[1] }' \
+      | xargs --replace='{}' zypper --non-interactive install 'go{}'
+
 RUN make kubectl
 
 FROM scratch
