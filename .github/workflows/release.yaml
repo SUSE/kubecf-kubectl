@@ -25,7 +25,7 @@ jobs:
         tag_name: ${{ github.event.inputs.kubectl_version }}
         body: |-
           A container image containing kubectl for KubeCF.
-          Image published to `ghcr.io/${{ github.event.inputs.ghcr_image_repository }}`.
+          Image published to `ghcr.io/${{ github.event.inputs.ghcr_image_repository }}:${{ github.event.inputs.kubectl_version }}`.
         draft: true
         prerelease: false
       env:
