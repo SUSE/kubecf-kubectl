@@ -63,4 +63,4 @@ RUN make kubectl
 FROM $FINAL_IMAGE_BASE
 COPY --from=staging_catatonit /build/catatonit/catatonit /usr/local/bin/catatonit
 COPY --from=staging_kubectl /build/kubernetes/_output/local/bin/linux/amd64/kubectl /usr/local/bin/kubectl
-ENTRYPOINT ["/usr/local/bin/catatonit", "--"]
+ENTRYPOINT ["/usr/local/bin/catatonit", "--", "/usr/local/bin/kubectl"]
