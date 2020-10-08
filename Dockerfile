@@ -56,7 +56,7 @@ RUN yq -r \
       '.dependencies[] | select(.name | startswith("golang")) | .version' \
       "build/dependencies.yaml" \
       | awk 'match($0, /^([0-9]+\.[0-9]+).*$/, version) { print version[1] }' \
-      | xargs --replace='{}' zypper --non-interactive install 'go{}'
+      | xargs --replace='{}' zypper --non-interactive install 'golang(API) = {}'
 
 RUN make kubectl
 
