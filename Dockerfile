@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+ARG FINAL_IMAGE_BASE=registry.suse.com/suse/sle15:15.2.8.2.763@sha256:ec381220e66096967e4babb4c3703fd68e4466943984b63770ac3b82e75c1830
+
 FROM opensuse/tumbleweed AS staging
 
 RUN zypper refresh
@@ -36,6 +38,6 @@ RUN yq -r \
 
 RUN make kubectl
 
-FROM scratch
-COPY --from=staging /build/kubernetes/_output/local/bin/linux/amd64/kubectl /kubectl
-ENTRYPOINT ["/kubectl"]
+FROM $FINAL_IMAGE_BASE
+COPY --from=staging /build/kubernetes/_output/local/bin/linux/amd64/kubectl /usr/local/bin/kubectl
+ENTRYPOINT ["/usr/local/bin/kubectl"]
