@@ -1,0 +1,70 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      ghcr_image_repository:
+        description: The image repository on GitHub Container Registry.
+        required: true
+        default: cfcontainerizationbot/kubecf-kubectl
+      kubectl_version:
+        description: The kubectl version to build.
+        required: true
+        default: v1.19.2
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Draft release
+      id: draft_release
+      uses: actions/create-release@v1
+      with:
+        release_name: ${{ github.event.inputs.kubectl_version }}
+        tag_name: ${{ github.event.inputs.kubectl_version }}
+        body: |-
+          A container image containing kubectl for KubeCF.
+          Image published to `ghcr.io/${{ github.event.inputs.ghcr_image_repository }}:${{ github.event.inputs.kubectl_version }}`.
+        draft: true
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - uses: docker/setup-buildx-action@v1
+    - uses: docker/login-action@v1
+      with:
+        registry: ghcr.io
+        username: ${{ secrets.GHCR_USERNAME }}
+        password: ${{ secrets.GHCR_PASSWORD }}
+    - name: Build and publish image
+      uses: docker/build-push-action@v2
+      with:
+        tags: ghcr.io/${{ github.event.inputs.ghcr_image_repository }}:${{ github.event.inputs.kubectl_version }}
+        build-args: |
+          KUBECTL_VERSION=${{ github.event.inputs.kubectl_version }}
+        labels: |
+          org.opencontainers.image.version=${{ github.event.inputs.kubectl_version }}
+          org.opencontainers.image.title=kubectl for KubeCF
+          org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          org.opencontainers.image.url=https://github.com/${{ github.repository }}
+          org.opencontainers.image.vendor=SUSE Cloud Application Platform
+          org.opencontainers.image.description=An image containing kubectl
+          org.opencontainers.image.revision=${{ github.sha }}
+        pull: true
+        push: true
+        file: Dockerfile
+    - name: Publish release
+      run: |-
+        set -o errexit -o nounset -o pipefail
+
+        >&2 echo "Removing the draft flag from release"
+
+        curl \
+          --silent \
+          --fail \
+          --request PATCH \
+          --header "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          --header "Content-Type: application/json" \
+          --header "Accept: application/vnd.github.v3+json" \
+          --data '{ "draft": "false" }' \
+          "https://api.github.com/repos/${{ github.repository }}/releases/${{ steps.draft_release.outputs.id }}"
