@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG FINAL_IMAGE_BASE=registry.suse.com/suse/sle15:15.2.8.2.763@sha256:ec381220e66096967e4babb4c3703fd68e4466943984b63770ac3b82e75c1830
+ARG FINAL_IMAGE_BASE=opensuse/tumbleweed
 
-FROM opensuse/tumbleweed AS base_compiler
+FROM $FINAL_IMAGE_BASE as base_image
 
 RUN zypper refresh
 RUN zypper --non-interactive install \
@@ -22,7 +22,7 @@ RUN zypper --non-interactive install \
       curl \
       catatonit
 
-FROM base_compiler AS staging_kubectl
+FROM base_image AS curl_kubectl
 ARG KUBECTL_VERSION
 ENV KUBECTL_VERSION=${KUBECTL_VERSION}
 
@@ -30,11 +30,9 @@ WORKDIR /build
 RUN curl -LO "https://dl.k8s.io/release/$KUBECTL_VERSION/bin/linux/amd64/kubectl"
 RUN curl -LO "https://dl.k8s.io/$KUBECTL_VERSION/bin/linux/amd64/kubectl.sha256"
 RUN echo "$(<kubectl.sha256) kubectl" | sha256sum --check
-RUN chown root:root kubectl
-RUN chmod +x kubectl
+RUN install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 
-FROM $FINAL_IMAGE_BASE
-COPY --from=base_compiler /usr/bin/jq /usr/local/bin/jq
-COPY --from=base_compiler /usr/bin/catatonit /usr/local/bin/catatonit
-COPY --from=staging_kubectl /build/kubectl /usr/local/bin/kubectl
-ENTRYPOINT ["/usr/local/bin/catatonit", "--", "/usr/local/bin/kubectl"]
+FROM base_image
+COPY --from=curl_kubectl /usr/local/bin/kubectl /usr/local/bin/kubectl
+
+ENTRYPOINT ["/usr/bin/catatonit", "--", "/usr/local/bin/kubectl"]
