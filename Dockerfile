@@ -18,51 +18,21 @@ FROM opensuse/tumbleweed AS base_compiler
 
 RUN zypper refresh
 RUN zypper --non-interactive install \
-      autoconf \
-      automake \
-      git-core \
       jq \
-      make
-
-FROM base_compiler AS staging_catatonit
-
-RUN zypper --non-interactive install \
-      gcc \
-      libtool
-
-WORKDIR /build/catatonit
-ARG CATATONIT_VERSION=v0.1.5
-ENV CATATONIT_VERSION=${CATATONIT_VERSION}
-RUN git clone \
-      --depth=1 \
-      --branch="${CATATONIT_VERSION}" \
-      https://github.com/openSUSE/catatonit.git /build/catatonit
-RUN ./autogen.sh
-RUN ./configure
-RUN make
+      curl \
+      catatonit
 
 FROM base_compiler AS staging_kubectl
-
-RUN zypper --non-interactive install python3-yq
-
-WORKDIR /build/kubernetes
 ARG KUBECTL_VERSION
 ENV KUBECTL_VERSION=${KUBECTL_VERSION}
-RUN git clone \
-      --depth=1 \
-      --branch="${KUBECTL_VERSION}" \
-      https://github.com/kubernetes/kubernetes.git /build/kubernetes
 
-RUN yq -r \
-      '.dependencies[] | select(.name | startswith("golang")) | .version' \
-      "build/dependencies.yaml" \
-      | awk 'match($0, /^([0-9]+\.[0-9]+).*$/, version) { print version[1] }' \
-      | xargs --replace='{}' zypper --non-interactive install 'golang(API) = {}'
-
-RUN make kubectl
+WORKDIR /build
+RUN curl -LO "https://dl.k8s.io/release/$KUBECTL_VERSION/bin/linux/amd64/kubectl"
+RUN curl -LO "https://dl.k8s.io/$KUBECTL_VERSION/bin/linux/amd64/kubectl.sha256"
+RUN echo "$(<kubectl.sha256) kubectl" | sha256sum --check
 
 FROM $FINAL_IMAGE_BASE
 COPY --from=base_compiler /usr/bin/jq /usr/local/bin/jq
-COPY --from=staging_catatonit /build/catatonit/catatonit /usr/local/bin/catatonit
-COPY --from=staging_kubectl /build/kubernetes/_output/local/bin/linux/amd64/kubectl /usr/local/bin/kubectl
+COPY --from=base_compiler /usr/bin/catatonit /usr/local/bin/catatonit
+COPY --from=staging_kubectl /build/kubectl /usr/local/bin/kubectl
 ENTRYPOINT ["/usr/local/bin/catatonit", "--", "/usr/local/bin/kubectl"]
