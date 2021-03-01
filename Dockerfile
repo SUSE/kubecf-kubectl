@@ -30,6 +30,8 @@ WORKDIR /build
 RUN curl -LO "https://dl.k8s.io/release/$KUBECTL_VERSION/bin/linux/amd64/kubectl"
 RUN curl -LO "https://dl.k8s.io/$KUBECTL_VERSION/bin/linux/amd64/kubectl.sha256"
 RUN echo "$(<kubectl.sha256) kubectl" | sha256sum --check
+RUN chown root:root kubectl
+RUN chmod +x kubectl
 
 FROM $FINAL_IMAGE_BASE
 COPY --from=base_compiler /usr/bin/jq /usr/local/bin/jq
