@@ -21,6 +21,7 @@ RUN zypper --non-interactive install \
       autoconf \
       automake \
       git-core \
+      jq \
       make
 
 FROM base_compiler AS staging_catatonit
@@ -61,6 +62,7 @@ RUN yq -r \
 RUN make kubectl
 
 FROM $FINAL_IMAGE_BASE
+COPY --from=base_compiler /usr/bin/jq /usr/local/bin/jq
 COPY --from=staging_catatonit /build/catatonit/catatonit /usr/local/bin/catatonit
 COPY --from=staging_kubectl /build/kubernetes/_output/local/bin/linux/amd64/kubectl /usr/local/bin/kubectl
 ENTRYPOINT ["/usr/local/bin/catatonit", "--", "/usr/local/bin/kubectl"]
